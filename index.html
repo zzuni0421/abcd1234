@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8efff">
+  <meta name="description" content="우리 반의 공지와 이야기가 모이는 곳, 우리반.zip">
+  <title>우리반.zip — 우리 반의 작은 아지트</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="우리반.zip 홈"><span class="brand-mark">♥</span><span>우리반<span class="brand-dot">.zip</span><small>우리의 하루가 모이는 곳</small></span></a>
+    <div class="top-actions"><span id="session-label" class="muted">로그인 전</span><button id="logout-btn" class="button button-quiet hidden">로그아웃</button></div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-copy"><span class="eyebrow">WELCOME TO OUR CLASS ✿</span><h1>우리 반에 온 걸<br><span>환영해!</span> 🌷</h1><p>공지 확인하고, 이야기 나누고, 우리만의 추억을 기록해 봐.</p></div>
+      <div class="hero-sticker" aria-hidden="true">✿<span>우리 반<br>아지트</span>♡</div>
+    </section>
+
+    <section id="auth-panel" class="panel auth-panel">
+      <div class="section-heading"><div><span class="eyebrow">MEMBER ACCESS</span><h2>우리 반 입장하기</h2></div><span class="pill">🔒 학급 전용</span></div>
+      <div class="auth-grid">
+        <form id="login-form" class="form-card">
+          <h3>로그인</h3>
+          <label>이메일<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+          <label>비밀번호<input name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="비밀번호"></label>
+          <button class="button button-primary" type="submit">로그인하기</button>
+        </form>
+        <form id="signup-form" class="form-card">
+          <h3>처음 왔나요?</h3>
+          <label>닉네임<input name="nickname" type="text" minlength="2" maxlength="20" required placeholder="친구들이 부를 이름"></label>
+          <label>이메일<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+          <label>비밀번호<input name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="8자 이상"></label>
+          <label>학급 초대 코드<input name="invite_code" type="password" required autocomplete="off" placeholder="선생님에게 받은 코드"></label>
+          <button class="button button-primary" type="submit">가입하고 입장하기</button>
+          <p class="fine-print">초대 코드는 다른 사람에게 공개하지 마세요.</p>
+        </form>
+      </div>
+    </section>
+
+    <section id="app-panel" class="hidden">
+      <div class="welcome-row panel">
+        <div><span class="eyebrow">YOUR CLASS SPACE</span><h2 id="welcome-title">안녕!</h2><p class="muted">오늘도 서로를 존중하며 즐겁게 이야기해요.</p></div>
+        <div class="profile-edit"><label for="profile-nickname">내 닉네임</label><div class="inline-form"><input id="profile-nickname" maxlength="20" placeholder="닉네임"><button id="save-profile-btn" class="button button-quiet">저장</button></div><span id="role-label" class="pill">학생</span></div>
+      </div>
+
+      <div class="content-grid">
+        <aside class="sidebar panel">
+          <h3>우리 반 메뉴</h3>
+          <button class="nav-item active" data-filter="all">✨ 전체 게시글</button>
+          <button class="nav-item" data-filter="notice">📌 공지사항</button>
+          <button class="nav-item" data-filter="free">💬 자유게시판</button>
+          <button class="nav-item" data-filter="study">📚 학습 자료실</button>
+          <div id="admin-tools" class="admin-tools hidden"><h3>관리자</h3><p class="muted">관리자 전용 공지를 작성할 수 있어요.</p><button id="new-notice-btn" class="button button-admin">＋ 공지 작성</button></div>
+        </aside>
+
+        <section class="feed-column">
+          <form id="post-form" class="panel composer">
+            <div class="section-heading"><div><span class="eyebrow">SHARE SOMETHING</span><h2>새 글 작성하기</h2></div><span class="composer-icon">✎</span></div>
+            <label>게시판<select name="category"><option value="free">💬 자유게시판</option><option value="study">📚 학습 자료실</option></select></label>
+            <label>제목<input name="title" required maxlength="120" placeholder="어떤 이야기를 나눠볼까요?"></label>
+            <label>내용<textarea name="body" required maxlength="10000" rows="4" placeholder="친구들과 나누고 싶은 이야기를 적어 봐요."></textarea></label>
+            <div class="composer-footer"><span class="muted fine-print">서로를 존중하는 글을 작성해 주세요.</span><button class="button button-primary" type="submit">게시하기 ↗</button></div>
+          </form>
+          <div class="feed-heading"><h2 id="feed-title">우리 반 이야기</h2><button id="refresh-btn" class="button button-quiet">↻ 새로고침</button></div>
+          <div id="feed" class="feed"><div class="empty-state">게시글을 불러오는 중...</div></div>
+        </section>
+      </div>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <footer class="footer">made with ♡ for our class <span>우리반.zip</span></footer>
+</body>
+</html>
