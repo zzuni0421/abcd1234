@@ -306,6 +306,11 @@
 
     const title = (values.title || "").trim();
     const body = (values.body || "").trim();
+    const allowedCategories = ["free", "study", "question", "homework", "album"];
+
+    if (!allowedCategories.includes(values.category)) {
+      return toast("올바른 게시판을 선택해 주세요.");
+    }
 
     if (!title || !body) {
       return toast("제목과 내용을 입력해 주세요.");
@@ -379,7 +384,10 @@
         all: "우리 반 이야기",
         notice: "📌 공지사항",
         free: "💬 자유게시판",
-        study: "📚 학습 자료실"
+        study: "📚 학습 자료실",
+        question: "❓ 질문과 답변",
+        homework: "🎒 숙제·준비물",
+        album: "📸 우리반 앨범"
       })[activeFilter] || "우리 반 이야기";
 
       renderPosts();
@@ -484,9 +492,12 @@
     const categoryName = post.is_notice
       ? "📌 공지"
       : ({
-          free: "자유게시판",
-          study: "학습 자료실",
-          notice: "공지사항"
+          free: "💬 자유게시판",
+          study: "📚 학습 자료실",
+          question: "❓ 질문과 답변",
+          homework: "🎒 숙제·준비물",
+          album: "📸 우리반 앨범",
+          notice: "📌 공지사항"
         })[post.category] || "게시글";
 
     meta.append(
