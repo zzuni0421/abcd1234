@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ko">
 <head>
@@ -15,7 +16,7 @@
   <header class="topbar">
     <a class="brand" href="#">
       <span class="brand-mark">♥</span>
-      <span>우리반<span class="brand-dot">.zip</span>
+      <span>우리반.zip<span class="brand-dot">.zip</span>
         <small>우리의 하루가 모이는 곳</small>
       </span>
     </a>
@@ -139,6 +140,15 @@
           <button class="nav-item" data-filter="study">
             📚 학습 자료실
           </button>
+          <button class="nav-item" data-filter="question">
+            ❓ 질문과 답변
+          </button>
+          <button class="nav-item" data-filter="homework">
+            🎒 숙제·준비물
+          </button>
+          <button class="nav-item" data-filter="album">
+            📸 우리반 앨범
+          </button>
 
           <div id="admin-tools" class="admin-tools hidden">
             <h3>관리자 메뉴</h3>
@@ -161,9 +171,12 @@
 
             <label>
               게시판
-              <select name="category">
+              <select name="category" required>
                 <option value="free">💬 자유게시판</option>
                 <option value="study">📚 학습 자료실</option>
+                <option value="question">❓ 질문과 답변</option>
+                <option value="homework">🎒 숙제·준비물</option>
+                <option value="album">📸 우리반 앨범</option>
               </select>
             </label>
 
