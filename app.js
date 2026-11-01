@@ -1,3 +1,4 @@
+
 (() => {
   "use strict";
 
@@ -15,22 +16,30 @@
   let postsCache = [];
 
   const configured =
-    cfg.SUPABASE_URL &&
-    !cfg.SUPABASE_URL.includes("YOUR_PROJECT") &&
-    cfg.SUPABASE_PUBLISHABLE_KEY &&
-    !cfg.SUPABASE_PUBLISHABLE_KEY.includes("YOUR_SUPABASE");
+    typeof cfg.SUPABASE_URL === "string" &&
+    cfg.SUPABASE_URL.startsWith("https://") &&
+    typeof cfg.SUPABASE_PUBLISHABLE_KEY === "string" &&
+    cfg.SUPABASE_PUBLISHABLE_KEY.length > 20;
 
-  const sb = configured && window.supabase
-    ? window.supabase.createClient(
-        cfg.SUPABASE_URL,
-        cfg.SUPABASE_PUBLISHABLE_KEY
-      )
-    : null;
+  const sb =
+    configured && window.supabase?.createClient
+      ? window.supabase.createClient(
+          cfg.SUPABASE_URL,
+          cfg.SUPABASE_PUBLISHABLE_KEY
+        )
+      : null;
 
   function toast(message) {
+    if (!toastEl) {
+      console.error(message);
+      return;
+    }
+
     toastEl.textContent = message;
     toastEl.classList.add("show");
+
     clearTimeout(toastTimer);
+
     toastTimer = setTimeout(() => {
       toastEl.classList.remove("show");
     }, 3200);
@@ -47,6 +56,8 @@
 
   function safeError(error) {
     const message = error?.message || "알 수 없는 오류가 발생했어요.";
+
+    console.error("[우리반.zip]", error);
 
     if (/Invalid login credentials/i.test(message)) {
       return "이메일 또는 비밀번호를 확인해 주세요.";
@@ -66,6 +77,18 @@
 
     if (/Database error saving new user/i.test(message)) {
       return "가입에 실패했어요. 실명, 가입 코드와 Supabase 설정을 확인해 주세요.";
+    }
+
+    if (/No API key found/i.test(message)) {
+      return "Supabase API 키를 요청에 전달하지 못했어요. config.js와 요청 주소를 확인해 주세요.";
+    }
+
+    if (/permission denied|row-level security/i.test(message)) {
+      return "접근 권한이 없어요. Supabase RLS 정책을 확인해 주세요.";
+    }
+
+    if (/column .* does not exist/i.test(message)) {
+      return "데이터베이스 컬럼과 앱 코드가 일치하지 않아요. SQL 구조를 확인해 주세요.";
     }
 
     if (/not a member|classroom/i.test(message)) {
@@ -94,7 +117,9 @@
     $("#profile-real-name").textContent = name;
 
     $("#role-label").textContent =
-      currentProfile?.role === "admin" ? "🛡️ 관리자" : "🌱 학생";
+      currentProfile?.role === "admin"
+        ? "🛡️ 관리자"
+        : "🌱 학생";
 
     $("#admin-tools").classList.toggle(
       "hidden",
@@ -103,6 +128,10 @@
   }
 
   async function loadProfile() {
+    if (!currentUser) {
+      throw new Error("로그인 정보가 없습니다.");
+    }
+
     const { data, error } = await sb
       .from("profiles")
       .select("id,real_name,role,classroom_id")
@@ -116,7 +145,9 @@
     if (!currentProfile?.classroom_id) {
       currentClassroom = null;
       showSignedOut();
+
       await sb.auth.signOut();
+
       currentUser = null;
 
       toast("학급 가입 정보를 찾을 수 없어요. 관리자에게 문의해 주세요.");
@@ -144,7 +175,7 @@
     event.preventDefault();
 
     if (!sb) {
-      return toast("config.js에 Supabase 설정을 입력해 주세요.");
+      return toast("config.js 또는 Supabase 라이브러리를 확인해 주세요.");
     }
 
     const form = event.currentTarget;
@@ -174,21 +205,21 @@
     }
   });
 
-  // 실명 + 이메일 + 비밀번호 + 학급 가입 코드 회원가입
+  // 회원가입
   $("#signup-form").addEventListener("submit", async event => {
     event.preventDefault();
 
     if (!sb) {
-      return toast("config.js에 Supabase 설정을 입력해 주세요.");
+      return toast("config.js 또는 Supabase 라이브러리를 확인해 주세요.");
     }
 
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form));
 
-    const realName = values.real_name.trim();
-    const inviteCode = values.invite_code.trim();
-    const email = values.email.trim();
-    const password = values.password;
+    const realName = (values.real_name || "").trim();
+    const inviteCode = (values.invite_code || "").trim();
+    const email = (values.email || "").trim();
+    const password = values.password || "";
 
     if (realName.length < 2 || realName.length > 20) {
       return toast("실명은 2~20자로 입력해 주세요.");
@@ -273,8 +304,8 @@
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form));
 
-    const title = values.title.trim();
-    const body = values.body.trim();
+    const title = (values.title || "").trim();
+    const body = (values.body || "").trim();
 
     if (!title || !body) {
       return toast("제목과 내용을 입력해 주세요.");
@@ -332,9 +363,10 @@
     toast("공지사항을 등록했어요 📌");
   });
 
-  // 게시판 필터
+  // 게시판 새로고침
   $("#refresh-btn").addEventListener("click", loadPosts);
 
+  // 게시판 필터
   $$(".nav-item").forEach(button => {
     button.addEventListener("click", () => {
       activeFilter = button.dataset.filter;
@@ -348,7 +380,7 @@
         notice: "📌 공지사항",
         free: "💬 자유게시판",
         study: "📚 학습 자료실"
-      })[activeFilter];
+      })[activeFilter] || "우리 반 이야기";
 
       renderPosts();
     });
@@ -574,10 +606,9 @@
     );
 
     const head = el("div", "comment-head");
+    const authorName = comment.profiles?.real_name || "친구";
 
-    head.append(
-      el("span", "", comment.profiles?.real_name || "친구")
-    );
+    head.append(el("span", "", authorName));
 
     if (comment.profiles?.role === "admin") {
       head.append(el("span", "pill", "관리자"));
@@ -605,7 +636,7 @@
 
       input.required = true;
       input.maxLength = 2000;
-      input.placeholder = `${comment.profiles?.real_name || "친구"}에게 답글`;
+      input.placeholder = `${authorName}에게 답글`;
 
       const send = el("button", "small-button", "등록");
       send.type = "submit";
@@ -677,24 +708,26 @@
   async function init() {
     if (!sb) {
       showSignedOut();
-      toast("config.js에 Supabase 설정을 입력해 주세요.");
+      toast("config.js 또는 Supabase 라이브러리를 확인해 주세요.");
       return;
     }
 
-    const {
-      data: { session }
-    } = await sb.auth.getSession();
+    try {
+      const {
+        data: { session },
+        error
+      } = await sb.auth.getSession();
 
-    if (session?.user) {
-      currentUser = session.user;
+      if (error) throw error;
 
-      try {
+      if (session?.user) {
+        currentUser = session.user;
         await loadProfile();
-      } catch (error) {
-        toast(safeError(error));
+      } else {
+        showSignedOut();
       }
-    } else {
-      showSignedOut();
+    } catch (error) {
+      toast(safeError(error));
     }
 
     sb.auth.onAuthStateChange(async (_event, sessionNow) => {
