@@ -1135,3 +1135,18 @@ async function loadActiveBlocks() {
     list.append(item);
   });
 }
+
+async function checkCurrentUserBlocked() {
+  if (!currentUser || currentProfile?.role === "admin") {
+    return false;
+  }
+
+  const { data, error } = await sb.rpc("current_user_is_blocked");
+
+  if (error) {
+    console.error("차단 상태 확인 실패:", error);
+    return false;
+  }
+
+  return data === true;
+}
