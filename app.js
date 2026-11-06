@@ -1,4 +1,3 @@
-
 (() => {
   "use strict";
 
@@ -539,6 +538,77 @@
     });
 
     actions.append(commentToggle);
+
+    // 게시글 수정: 작성자 본인 또는 관리자
+    if (canDelete(post.author_id)) {
+      const editButton = el("button", "small-button", "수정");
+      editButton.type = "button";
+
+      editButton.addEventListener("click", () => {
+        // 이미 수정 폼이 열려 있으면 중복 생성하지 않음
+        if ($(".post-edit-form", card)) return;
+
+        const editForm = el("form", "comment-form post-edit-form");
+
+        const titleInput = el("input");
+        titleInput.name = "title";
+        titleInput.value = post.title || "";
+        titleInput.maxLength = 120;
+        titleInput.required = true;
+        titleInput.placeholder = "제목";
+
+        const bodyInput = el("textarea");
+        bodyInput.name = "body";
+        bodyInput.value = post.body || "";
+        bodyInput.maxLength = 10000;
+        bodyInput.rows = 5;
+        bodyInput.required = true;
+        bodyInput.placeholder = "내용";
+
+        const saveButton = el("button", "small-button", "저장");
+        saveButton.type = "submit";
+
+        const cancelButton = el("button", "small-button", "취소");
+        cancelButton.type = "button";
+        cancelButton.addEventListener("click", () => editForm.remove());
+
+        editForm.append(titleInput, bodyInput, saveButton, cancelButton);
+
+        editForm.addEventListener("submit", async event => {
+          event.preventDefault();
+
+          const title = titleInput.value.trim();
+          const body = bodyInput.value.trim();
+
+          if (!title || !body) {
+            return toast("제목과 내용을 입력해 주세요.");
+          }
+
+          saveButton.disabled = true;
+
+          try {
+            const { error } = await sb
+              .from("posts")
+              .update({ title, body })
+              .eq("id", post.id);
+
+            if (error) throw error;
+
+            await loadPosts();
+            toast("게시글을 수정했어요.");
+          } catch (error) {
+            toast(safeError(error));
+          } finally {
+            saveButton.disabled = false;
+          }
+        });
+
+        card.append(editForm);
+        titleInput.focus();
+      });
+
+      actions.append(editButton);
+    }
 
     if (canDelete(post.author_id)) {
       const deleteButton = el("button", "small-button danger", "삭제");
