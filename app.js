@@ -835,3 +835,294 @@
 
   init();
 })();
+
+// =========================================
+// 관리자 기간제 작성 차단 관리
+// =========================================
+
+async function setupBlockPanel() {
+  const adminTools = $("#admin-tools");
+
+  if (!adminTools || currentProfile?.role !== "admin") return;
+
+  let panel = $("#block-management-panel");
+
+  if (!panel) {
+    panel = el("section", "block-management-panel");
+    panel.id = "block-management-panel";
+
+    const heading = el("h3", "", "🔒 학생 작성 차단 관리");
+    const description = el(
+      "p",
+      "muted",
+      "차단된 학생은 로그인할 수 있지만 게시글과 댓글을 작성할 수 없어요."
+    );
+
+    const form = el("form", "comment-form");
+    form.id = "block-create-form";
+
+    const studentSelect = el("select");
+    studentSelect.name = "target_user_id";
+    studentSelect.required = true;
+    studentSelect.id = "block-student-select";
+
+    const studentPlaceholder = el("option", "", "학생 선택");
+    studentPlaceholder.value = "";
+    studentPlaceholder.disabled = true;
+    studentPlaceholder.selected = true;
+    studentSelect.append(studentPlaceholder);
+
+    const reasonInput = el("input");
+    reasonInput.name = "reason";
+    reasonInput.placeholder = "차단 사유";
+    reasonInput.maxLength = 300;
+    reasonInput.required = true;
+
+    const untilInput = el("input");
+    untilInput.name = "blocked_until";
+    untilInput.type = "datetime-local";
+    untilInput.required = true;
+
+    const submitButton = el("button", "small-button", "차단 적용");
+    submitButton.type = "submit";
+
+    form.append(
+      studentSelect,
+      reasonInput,
+      untilInput,
+      submitButton
+    );
+
+    const activeHeading = el("h4", "", "현재 차단 중인 학생");
+    const activeList = el("div", "active-block-list");
+    activeList.id = "active-block-list";
+
+    panel.append(
+      heading,
+      description,
+      form,
+      activeHeading,
+      activeList
+    );
+
+    adminTools.append(panel);
+  }
+
+  await loadBlockStudents();
+  await loadActiveBlocks();
+}
+
+
+// 학생 목록 불러오기
+async function loadBlockStudents() {
+  const select = $("#block-student-select");
+
+  if (!select) return;
+
+  const previousValue = select.value;
+
+  const { data, error } = await sb
+    .from("profiles")
+    .select("id,real_name,role,classroom_id")
+    .eq("classroom_id", currentClassroom.id)
+    .order("real_name");
+
+  if (error) {
+    toast(safeError(error));
+    return;
+  }
+
+  select.replaceChildren();
+
+  const placeholder = el("option", "", "학생 선택");
+  placeholder.value = "";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+
+  select.append(placeholder);
+
+  (data || [])
+    .filter(profile => profile.role !== "admin")
+    .forEach(profile => {
+      const option = el(
+        "option",
+        "",
+        profile.real_name || "이름 미설정"
+      );
+
+      option.value = profile.id;
+
+      select.append(option);
+    });
+
+  if (previousValue) {
+    select.value = previousValue;
+  }
+}
+
+
+// 차단 적용
+$("#admin-tools").addEventListener("submit", async event => {
+  if (event.target.id !== "block-create-form") return;
+
+  event.preventDefault();
+
+  if (currentProfile?.role !== "admin") {
+    return toast("관리자만 차단할 수 있어요.");
+  }
+
+  const form = event.target;
+  const values = Object.fromEntries(new FormData(form));
+
+  const targetUserId = values.target_user_id;
+  const reason = (values.reason || "").trim();
+  const blockedUntil = values.blocked_until;
+
+  if (!targetUserId || !reason || !blockedUntil) {
+    return toast("학생, 사유, 종료 시각을 모두 입력해 주세요.");
+  }
+
+  const untilDate = new Date(blockedUntil);
+
+  if (Number.isNaN(untilDate.getTime())) {
+    return toast("올바른 차단 종료 날짜를 입력해 주세요.");
+  }
+
+  if (untilDate <= new Date()) {
+    return toast("차단 종료 시각은 현재보다 미래여야 해요.");
+  }
+
+  if (targetUserId === currentUser.id) {
+    return toast("자기 자신은 차단할 수 없어요.");
+  }
+
+  const submitButton = $("button[type=submit]", form);
+  submitButton.disabled = true;
+
+  try {
+    const { error } = await sb
+      .from("user_blocks")
+      .insert({
+        target_user_id: targetUserId,
+        admin_id: currentUser.id,
+        reason,
+        blocked_until: untilDate.toISOString()
+      });
+
+    if (error) throw error;
+
+    form.reset();
+
+    await loadActiveBlocks();
+
+    toast("학생 작성 차단을 적용했어요.");
+  } catch (error) {
+    toast(safeError(error));
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+
+// 현재 차단 중인 학생 목록
+async function loadActiveBlocks() {
+  const list = $("#active-block-list");
+
+  if (!list || currentProfile?.role !== "admin") return;
+
+  list.replaceChildren(
+    el("div", "muted", "차단 목록을 불러오는 중...")
+  );
+
+  const { data, error } = await sb
+    .from("user_blocks")
+    .select(`
+      id,
+      target_user_id,
+      reason,
+      blocked_until,
+      created_at,
+      profiles!user_blocks_target_user_id_fkey(real_name)
+    `)
+    .gt("blocked_until", new Date().toISOString())
+    .order("blocked_until", { ascending: true });
+
+  if (error) {
+    list.replaceChildren(
+      el("div", "muted", "차단 목록을 불러오지 못했어요.")
+    );
+
+    toast(safeError(error));
+    return;
+  }
+
+  list.replaceChildren();
+
+  const classroomUserIds = new Set(
+    postsCache.map(post => post.author_id)
+  );
+
+  const activeBlocks = (data || []).filter(block => {
+    return block.profiles?.real_name;
+  });
+
+  if (!activeBlocks.length) {
+    list.append(
+      el("div", "empty-state", "현재 차단 중인 학생이 없어요.")
+    );
+
+    return;
+  }
+
+  activeBlocks.forEach(block => {
+    const item = el("div", "block-item");
+    const info = el("div", "block-info");
+
+    info.append(
+      el(
+        "strong",
+        "",
+        block.profiles?.real_name || "학생"
+      ),
+      el(
+        "div",
+        "muted",
+        "사유: " + (block.reason || "미입력")
+      ),
+      el(
+        "div",
+        "muted",
+        "종료: " + formatDate(block.blocked_until)
+      )
+    );
+
+    const releaseButton = el(
+      "button",
+      "small-button",
+      "차단 해제"
+    );
+
+    releaseButton.type = "button";
+
+    releaseButton.addEventListener("click", async () => {
+      if (!confirm("이 학생의 차단을 해제할까요?")) return;
+
+      const { error } = await sb
+        .from("user_blocks")
+        .delete()
+        .eq("id", block.id);
+
+      if (error) {
+        toast(safeError(error));
+        return;
+      }
+
+      await loadActiveBlocks();
+
+      toast("차단을 해제했어요.");
+    });
+
+    item.append(info, releaseButton);
+    list.append(item);
+  });
+}
