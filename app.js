@@ -126,6 +126,10 @@
     );
   }
 
+  if (currentProfile?.role === "admin") {
+  setupBlockPanel();
+}
+  
   async function loadProfile() {
     if (!currentUser) {
       throw new Error("로그인 정보가 없습니다.");
@@ -164,6 +168,11 @@
     currentClassroom = classroom;
 
     showSignedIn();
+    const blocked = await checkCurrentUserBlocked();
+
+if (blocked) {
+  toast("현재 작성이 제한된 계정이에요. 기존 게시글은 볼 수 있어요.");
+}
     await loadPosts();
 
     return true;
