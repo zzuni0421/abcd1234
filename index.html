@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ko">
 <head>
@@ -6,22 +7,29 @@
   <meta name="theme-color" content="#f8efff">
   <meta name="description" content="우리 반의 공지와 이야기가 모이는 곳, 우리반.zip">
   <title>우리반.zip — 우리 반의 작은 아지트</title>
+
   <link rel="stylesheet" href="./styles.css">
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./app.js" defer></script>
 </head>
+
 <body>
   <header class="topbar">
     <a class="brand" href="#">
       <span class="brand-mark">♥</span>
-      <span>우리반.zip<span class="brand-dot">.zip</span>
+      <span>
+        우리반.zip<span class="brand-dot">.zip</span>
         <small>우리의 하루가 모이는 곳</small>
       </span>
     </a>
+
     <div class="top-actions">
       <span id="session-label" class="muted">로그인 전</span>
-      <button id="logout-btn" class="button button-quiet hidden">로그아웃</button>
+      <button id="logout-btn" class="button button-quiet hidden">
+        로그아웃
+      </button>
     </div>
   </header>
 
@@ -29,11 +37,22 @@
     <section class="hero">
       <div class="hero-copy">
         <span class="eyebrow">WELCOME TO OUR CLASS ✿</span>
-        <h1>우리 반에 온 걸<br><span>환영해!</span> 🌷</h1>
-        <p>공지 확인하고, 이야기 나누고, 우리만의 추억을 기록해 봐.</p>
+
+        <h1>
+          우리 반에 온 걸<br>
+          <span>환영해!</span> 🌷
+        </h1>
+
+        <p>
+          공지 확인하고, 이야기 나누고,
+          우리만의 추억을 기록해 봐.
+        </p>
       </div>
+
       <div class="hero-sticker" aria-hidden="true">
-        ✿<span>우리 반<br>아지트</span>♡
+        ✿
+        <span>우리 반<br>아지트</span>
+        ♡
       </div>
     </section>
 
@@ -43,6 +62,7 @@
           <span class="eyebrow">MEMBER ACCESS</span>
           <h2>우리 반 입장하기</h2>
         </div>
+
         <span class="pill">🔒 학급 전용</span>
       </div>
 
@@ -52,14 +72,24 @@
 
           <label>
             이메일
-            <input name="email" type="email" autocomplete="email"
-              required placeholder="이메일 주소">
+            <input
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="이메일 주소"
+            >
           </label>
 
           <label>
             비밀번호
-            <input name="password" type="password"
-              autocomplete="current-password" required placeholder="비밀번호">
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="비밀번호"
+            >
           </label>
 
           <button class="button button-primary" type="submit">
@@ -72,27 +102,50 @@
 
           <label>
             실명
-            <input name="real_name" type="text" minlength="2" maxlength="20"
-              required autocomplete="name" placeholder="학교에서 사용하는 이름">
+            <input
+              name="real_name"
+              type="text"
+              minlength="2"
+              maxlength="20"
+              required
+              autocomplete="name"
+              placeholder="학교에서 사용하는 이름"
+            >
           </label>
 
           <label>
             이메일
-            <input name="email" type="email" autocomplete="email"
-              required placeholder="이메일 주소">
+            <input
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="이메일 주소"
+            >
           </label>
 
           <label>
             비밀번호
-            <input name="password" type="password" minlength="8"
-              autocomplete="new-password" required placeholder="8자 이상">
+            <input
+              name="password"
+              type="password"
+              minlength="8"
+              autocomplete="new-password"
+              required
+              placeholder="8자 이상"
+            >
           </label>
 
           <label>
             학급 가입 코드
-            <input name="invite_code" type="password" required
-              minlength="6" autocomplete="off"
-              placeholder="선생님에게 받은 코드">
+            <input
+              name="invite_code"
+              type="password"
+              required
+              minlength="6"
+              autocomplete="off"
+              placeholder="선생님에게 받은 코드"
+            >
           </label>
 
           <button class="button button-primary" type="submit">
@@ -112,13 +165,19 @@
         <div>
           <span class="eyebrow">YOUR CLASS SPACE</span>
           <h2 id="welcome-title">안녕!</h2>
-          <p class="muted">오늘도 서로를 존중하며 즐겁게 이야기해요.</p>
+          <p class="muted">
+            오늘도 서로를 존중하며 즐겁게 이야기해요.
+          </p>
         </div>
 
         <div class="profile-edit">
           <span class="muted">내 실명</span>
           <strong id="profile-real-name">실명</strong>
-          <span class="fine-print">실명제 운영으로 이름은 직접 변경할 수 없어요.</span>
+
+          <span class="fine-print">
+            실명제 운영으로 이름은 직접 변경할 수 없어요.
+          </span>
+
           <span id="role-label" class="pill">학생</span>
         </div>
       </div>
@@ -130,32 +189,30 @@
           <button class="nav-item active" data-filter="all">
             ✨ 전체 게시글
           </button>
+
           <button class="nav-item" data-filter="notice">
             📌 공지사항
           </button>
+
           <button class="nav-item" data-filter="free">
             💬 자유게시판
           </button>
+
           <button class="nav-item" data-filter="study">
             📚 학습 자료실
           </button>
+
           <button class="nav-item" data-filter="question">
             ❓ 질문과 답변
           </button>
+
           <button class="nav-item" data-filter="homework">
             🎒 숙제·준비물
           </button>
+
           <button class="nav-item" data-filter="album">
             📸 우리반 앨범
           </button>
-
-          <div id="admin-tools" class="admin-tools hidden">
-            <h3>관리자 메뉴</h3>
-            <p class="muted">관리자만 공지를 작성할 수 있어요.</p>
-            <button id="new-notice-btn" class="button button-admin">
-              ＋ 공지 작성
-            </button>
-          </div>
         </aside>
 
         <section class="feed-column">
@@ -165,6 +222,7 @@
                 <span class="eyebrow">SHARE SOMETHING</span>
                 <h2>새 글 작성하기</h2>
               </div>
+
               <span class="composer-icon">✎</span>
             </div>
 
@@ -181,18 +239,30 @@
 
             <label>
               제목
-              <input name="title" required maxlength="120"
-                placeholder="어떤 이야기를 나눠볼까요?">
+              <input
+                name="title"
+                required
+                maxlength="120"
+                placeholder="어떤 이야기를 나눠볼까요?"
+              >
             </label>
 
             <label>
               내용
-              <textarea name="body" required maxlength="10000" rows="4"
-                placeholder="친구들과 나누고 싶은 이야기를 적어 봐요."></textarea>
+              <textarea
+                name="body"
+                required
+                maxlength="10000"
+                rows="4"
+                placeholder="친구들과 나누고 싶은 이야기를 적어 봐요."
+              ></textarea>
             </label>
 
             <div class="composer-footer">
-              <span class="muted fine-print">서로를 존중하는 글을 작성해 주세요.</span>
+              <span class="muted fine-print">
+                서로를 존중하는 글을 작성해 주세요.
+              </span>
+
               <button class="button button-primary" type="submit">
                 게시하기 ↗
               </button>
@@ -201,23 +271,32 @@
 
           <div class="feed-heading">
             <h2 id="feed-title">우리 반 이야기</h2>
+
             <button id="refresh-btn" class="button button-quiet">
               ↻ 새로고침
             </button>
           </div>
 
           <div id="feed" class="feed">
-            <div class="empty-state">게시글을 불러오는 중...</div>
+            <div class="empty-state">
+              게시글을 불러오는 중...
+            </div>
           </div>
         </section>
       </div>
     </section>
 
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div
+      id="toast"
+      class="toast"
+      role="status"
+      aria-live="polite"
+    ></div>
   </main>
 
   <footer class="footer">
-    made with ♡ for our class <span>우리반.zip</span>
+    made with ♡ for our class
+    <span>우리반.zip</span>
   </footer>
 </body>
 </html>
