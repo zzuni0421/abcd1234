@@ -62,6 +62,13 @@
       background: #fff;
     }
 
+    .admin-form textarea {
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
     .admin-button {
       border: 0;
       border-radius: 12px;
@@ -125,10 +132,19 @@
       background: #f8effb;
       color: #68477c;
       margin-bottom: 16px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .hidden {
       display: none !important;
+    }
+
+    .notice-message {
+      margin-top: 12px;
+      color: #68477c;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     @media (max-width: 600px) {
@@ -150,6 +166,7 @@
 
 <body>
   <main class="admin-page">
+
     <header class="admin-header">
       <div>
         <h1>🛡️ 관리자 페이지</h1>
@@ -166,6 +183,46 @@
     </div>
 
     <section id="admin-content" class="hidden">
+
+      <!-- 공지사항 작성 -->
+      <section class="admin-card">
+        <h2>📌 공지사항 작성</h2>
+
+        <p class="muted">
+          공지 제목과 내용을 입력해 주세요.
+          내용은 엔터를 눌러 줄을 바꿀 수 있어요.
+        </p>
+
+        <form id="notice-form" class="admin-form">
+
+          <label for="notice-title">공지 제목</label>
+          <input
+            id="notice-title"
+            name="title"
+            type="text"
+            maxlength="200"
+            placeholder="공지 제목을 입력하세요"
+            required
+          >
+
+          <label for="notice-body">공지 내용</label>
+          <textarea
+            id="notice-body"
+            name="body"
+            rows="10"
+            placeholder="공지 내용을 입력하세요.&#10;엔터를 눌러 줄을 바꿀 수 있어요."
+            required
+          ></textarea>
+
+          <button type="submit" class="admin-button" id="notice-submit">
+            📢 공지 등록하기
+          </button>
+        </form>
+
+        <p id="notice-message" class="notice-message" aria-live="polite"></p>
+      </section>
+
+      <!-- 학생 작성 차단 -->
       <section class="admin-card">
         <h2>🔒 학생 작성 차단</h2>
 
@@ -174,6 +231,7 @@
         </p>
 
         <form id="block-create-form" class="admin-form">
+
           <label for="block-student-select">차단할 학생</label>
           <select
             id="block-student-select"
@@ -207,6 +265,7 @@
         </form>
       </section>
 
+      <!-- 현재 차단 목록 -->
       <section class="admin-card">
         <h2>📋 현재 차단 중인 학생</h2>
 
@@ -214,6 +273,7 @@
           불러오는 중...
         </div>
       </section>
+
     </section>
   </main>
 
@@ -228,9 +288,14 @@
 
       const statusMessage = document.querySelector("#status-message");
       const adminContent = document.querySelector("#admin-content");
+
       const studentSelect = document.querySelector("#block-student-select");
       const blockForm = document.querySelector("#block-create-form");
       const activeBlockList = document.querySelector("#active-block-list");
+
+      const noticeForm = document.querySelector("#notice-form");
+      const noticeMessage = document.querySelector("#notice-message");
+      const noticeSubmit = document.querySelector("#notice-submit");
 
       let currentUser = null;
       let currentProfile = null;
@@ -285,6 +350,7 @@
         );
       }
 
+      // 관리자 권한 확인
       async function checkAdminAccess() {
         if (!supabaseClient) {
           showStatus("Supabase 설정을 확인해 주세요.");
@@ -299,18 +365,22 @@
         if (sessionError) throw sessionError;
 
         if (!session?.user) {
-          showStatus("로그인이 필요해요. 누리집에서 먼저 로그인해 주세요.");
+          showStatus(
+            "로그인이 필요해요. 누리집에서 먼저 로그인해 주세요."
+          );
           return false;
         }
 
         currentUser = session.user;
 
-        const { data: profile, error: profileError } =
-          await supabaseClient
-            .from("profiles")
-            .select("id,real_name,role,classroom_id")
-            .eq("id", currentUser.id)
-            .maybeSingle();
+        const {
+          data: profile,
+          error: profileError
+        } = await supabaseClient
+          .from("profiles")
+          .select("id,real_name,role,classroom_id")
+          .eq("id", currentUser.id)
+          .maybeSingle();
 
         if (profileError) throw profileError;
 
@@ -321,12 +391,14 @@
 
         currentProfile = profile;
 
-        const { data: classroom, error: classroomError } =
-          await supabaseClient
-            .from("classrooms")
-            .select("id,name")
-            .eq("id", profile.classroom_id)
-            .single();
+        const {
+          data: classroom,
+          error: classroomError
+        } = await supabaseClient
+          .from("classrooms")
+          .select("id,name")
+          .eq("id", profile.classroom_id)
+          .single();
 
         if (classroomError) throw classroomError;
 
@@ -337,6 +409,7 @@
         return true;
       }
 
+      // 학생 목록 불러오기
       async function loadStudents() {
         const { data, error } = await supabaseClient
           .from("profiles")
@@ -368,6 +441,7 @@
           });
       }
 
+      // 현재 차단 목록 불러오기
       async function loadActiveBlocks() {
         activeBlockList.textContent = "불러오는 중...";
 
@@ -453,11 +527,65 @@
         });
       }
 
+      // 공지사항 등록
+      noticeForm.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (currentProfile?.role !== "admin") {
+          noticeMessage.textContent =
+            "관리자만 공지를 작성할 수 있어요.";
+          return;
+        }
+
+        const title = noticeForm.elements.title.value.trim();
+        const body = noticeForm.elements.body.value.trim();
+
+        if (!title || !body) {
+          noticeMessage.textContent =
+            "공지 제목과 내용을 모두 입력해 주세요.";
+          return;
+        }
+
+        noticeSubmit.disabled = true;
+        noticeMessage.textContent = "공지 등록 중...";
+
+        try {
+          const { error } = await supabaseClient
+            .from("posts")
+            .insert({
+              classroom_id: currentClassroom.id,
+              author_id: currentUser.id,
+              category: "notice",
+              title,
+              body,
+              is_notice: true
+            });
+
+          if (error) throw error;
+
+          noticeForm.reset();
+
+          noticeMessage.textContent =
+            "공지사항이 등록되었어요! 📌";
+        } catch (error) {
+          console.error("[공지 등록]", error);
+
+          noticeMessage.textContent =
+            error?.message ||
+            "공지 등록에 실패했어요. 권한을 확인해 주세요.";
+        } finally {
+          noticeSubmit.disabled = false;
+        }
+      });
+
+      // 학생 작성 차단 적용
       blockForm.addEventListener("submit", async event => {
         event.preventDefault();
 
         if (currentProfile?.role !== "admin") {
-          showStatus("관리자만 작성 차단을 설정할 수 있어요.");
+          showStatus(
+            "관리자만 작성 차단을 설정할 수 있어요."
+          );
           return;
         }
 
@@ -480,7 +608,9 @@
           Number.isNaN(untilDate.getTime()) ||
           untilDate <= new Date()
         ) {
-          showStatus("차단 종료 시각은 현재보다 미래여야 해요.");
+          showStatus(
+            "차단 종료 시각은 현재보다 미래여야 해요."
+          );
           return;
         }
 
@@ -518,6 +648,7 @@
         }
       });
 
+      // 관리자 페이지 초기화
       async function init() {
         try {
           const allowed = await checkAdminAccess();
