@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 페이지 | 우리반.zip</title>
+
+  <link rel="stylesheet" href="./styles.css">
+
+  <style>
+    body {
+      background: #fff8fc;
+    }
+
+    .admin-page {
+      width: min(100% - 32px, 900px);
+      margin: 40px auto;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .admin-header h1 {
+      margin: 0;
+      color: #392b45;
+    }
+
+    .admin-card {
+      background: #fff;
+      border: 1px solid #f0e3f1;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(80, 40, 90, 0.05);
+    }
+
+    .admin-card h2 {
+      margin-top: 0;
+      color: #493653;
+    }
+
+    .admin-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .admin-form input,
+    .admin-form select,
+    .admin-form textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border: 1px solid #e6d8e9;
+      border-radius: 12px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .admin-button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      background: #a66bd4;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .admin-button:hover {
+      filter: brightness(.96);
+    }
+
+    .admin-button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    .admin-button.secondary {
+      background: #f0e7f5;
+      color: #604274;
+    }
+
+    .admin-button.danger {
+      background: #e66c82;
+    }
+
+    .block-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid #f1e8f3;
+    }
+
+    .block-item:last-child {
+      border-bottom: 0;
+    }
+
+    .block-info {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .block-info strong {
+      color: #392b45;
+    }
+
+    .muted {
+      color: #8b7d91;
+      font-size: 13px;
+    }
+
+    .status-message {
+      padding: 14px;
+      border-radius: 12px;
+      background: #f8effb;
+      color: #68477c;
+      margin-bottom: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 600px) {
+      .admin-page {
+        margin: 20px auto;
+      }
+
+      .admin-card {
+        padding: 18px;
+      }
+
+      .block-item {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="admin-page">
+    <header class="admin-header">
+      <div>
+        <h1>🛡️ 관리자 페이지</h1>
+        <p class="muted">우리반.zip 운영 관리</p>
+      </div>
+
+      <a href="./index.html" class="admin-button secondary">
+        ← 누리집으로 돌아가기
+      </a>
+    </header>
+
+    <div id="status-message" class="status-message">
+      관리자 권한을 확인하고 있어요...
+    </div>
+
+    <section id="admin-content" class="hidden">
+      <section class="admin-card">
+        <h2>🔒 학생 작성 차단</h2>
+
+        <p class="muted">
+          차단된 학생은 로그인은 가능하지만 게시글과 댓글을 작성할 수 없어요.
+        </p>
+
+        <form id="block-create-form" class="admin-form">
+          <label for="block-student-select">차단할 학생</label>
+          <select
+            id="block-student-select"
+            name="target_user_id"
+            required
+          >
+            <option value="">학생을 선택해 주세요</option>
+          </select>
+
+          <label for="block-reason">차단 사유</label>
+          <input
+            id="block-reason"
+            name="reason"
+            type="text"
+            maxlength="300"
+            placeholder="차단 사유를 입력해 주세요"
+            required
+          >
+
+          <label for="block-until">차단 종료 시각</label>
+          <input
+            id="block-until"
+            name="blocked_until"
+            type="datetime-local"
+            required
+          >
+
+          <button type="submit" class="admin-button">
+            작성 차단 적용
+          </button>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>📋 현재 차단 중인 학생</h2>
+
+        <div id="active-block-list">
+          불러오는 중...
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const cfg = window.URIBAN_CONFIG || {};
+
+      const statusMessage = document.querySelector("#status-message");
+      const adminContent = document.querySelector("#admin-content");
+      const studentSelect = document.querySelector("#block-student-select");
+      const blockForm = document.querySelector("#block-create-form");
+      const activeBlockList = document.querySelector("#active-block-list");
+
+      let currentUser = null;
+      let currentProfile = null;
+      let currentClassroom = null;
+
+      const configured =
+        typeof cfg.SUPABASE_URL === "string" &&
+        cfg.SUPABASE_URL.startsWith("https://") &&
+        typeof cfg.SUPABASE_PUBLISHABLE_KEY === "string" &&
+        cfg.SUPABASE_PUBLISHABLE_KEY.length > 20;
+
+      const supabaseClient =
+        configured && window.supabase?.createClient
+          ? window.supabase.createClient(
+              cfg.SUPABASE_URL,
+              cfg.SUPABASE_PUBLISHABLE_KEY
+            )
+          : null;
+
+      function showStatus(message) {
+        statusMessage.textContent = message;
+        statusMessage.classList.remove("hidden");
+      }
+
+      function showAdminPage() {
+        statusMessage.classList.add("hidden");
+        adminContent.classList.remove("hidden");
+      }
+
+      function escapeHTML(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function formatDate(value) {
+        return new Intl.DateTimeFormat("ko-KR", {
+          dateStyle: "medium",
+          timeStyle: "short"
+        }).format(new Date(value));
+      }
+
+      function showError(error) {
+        console.error("[관리자 페이지]", error);
+
+        showStatus(
+          error?.message ||
+          "오류가 발생했어요. Supabase 설정과 권한을 확인해 주세요."
+        );
+      }
+
+      async function checkAdminAccess() {
+        if (!supabaseClient) {
+          showStatus("Supabase 설정을 확인해 주세요.");
+          return false;
+        }
+
+        const {
+          data: { session },
+          error: sessionError
+        } = await supabaseClient.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (!session?.user) {
+          showStatus("로그인이 필요해요. 누리집에서 먼저 로그인해 주세요.");
+          return false;
+        }
+
+        currentUser = session.user;
+
+        const { data: profile, error: profileError } =
+          await supabaseClient
+            .from("profiles")
+            .select("id,real_name,role,classroom_id")
+            .eq("id", currentUser.id)
+            .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        if (!profile || profile.role !== "admin") {
+          showStatus("관리자만 접근할 수 있는 페이지예요.");
+          return false;
+        }
+
+        currentProfile = profile;
+
+        const { data: classroom, error: classroomError } =
+          await supabaseClient
+            .from("classrooms")
+            .select("id,name")
+            .eq("id", profile.classroom_id)
+            .single();
+
+        if (classroomError) throw classroomError;
+
+        currentClassroom = classroom;
+
+        showAdminPage();
+
+        return true;
+      }
+
+      async function loadStudents() {
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select("id,real_name,role,classroom_id")
+          .eq("classroom_id", currentClassroom.id)
+          .order("real_name");
+
+        if (error) throw error;
+
+        studentSelect.replaceChildren();
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "학생을 선택해 주세요";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+
+        studentSelect.append(placeholder);
+
+        (data || [])
+          .filter(profile => profile.role !== "admin")
+          .forEach(profile => {
+            const option = document.createElement("option");
+
+            option.value = profile.id;
+            option.textContent = profile.real_name || "이름 미설정";
+
+            studentSelect.append(option);
+          });
+      }
+
+      async function loadActiveBlocks() {
+        activeBlockList.textContent = "불러오는 중...";
+
+        const { data, error } = await supabaseClient
+          .from("user_blocks")
+          .select(`
+            id,
+            target_user_id,
+            reason,
+            blocked_until,
+            profiles!user_blocks_target_user_id_fkey(real_name)
+          `)
+          .gt("blocked_until", new Date().toISOString())
+          .order("blocked_until", { ascending: true });
+
+        if (error) throw error;
+
+        activeBlockList.replaceChildren();
+
+        const blocks = (data || []).filter(block => {
+          return block.profiles?.real_name;
+        });
+
+        if (!blocks.length) {
+          activeBlockList.textContent =
+            "현재 작성 차단 중인 학생이 없어요.";
+          return;
+        }
+
+        blocks.forEach(block => {
+          const item = document.createElement("div");
+          item.className = "block-item";
+
+          const info = document.createElement("div");
+          info.className = "block-info";
+
+          const name = document.createElement("strong");
+          name.textContent =
+            block.profiles?.real_name || "학생";
+
+          const reason = document.createElement("span");
+          reason.className = "muted";
+          reason.textContent =
+            "사유: " + (block.reason || "미입력");
+
+          const until = document.createElement("span");
+          until.className = "muted";
+          until.textContent =
+            "종료: " + formatDate(block.blocked_until);
+
+          info.append(name, reason, until);
+
+          const releaseButton = document.createElement("button");
+          releaseButton.type = "button";
+          releaseButton.className = "admin-button danger";
+          releaseButton.textContent = "차단 해제";
+
+          releaseButton.addEventListener("click", async () => {
+            if (!confirm("이 학생의 작성 차단을 해제할까요?")) {
+              return;
+            }
+
+            releaseButton.disabled = true;
+
+            try {
+              const { error: deleteError } = await supabaseClient
+                .from("user_blocks")
+                .delete()
+                .eq("id", block.id);
+
+              if (deleteError) throw deleteError;
+
+              await loadActiveBlocks();
+            } catch (error) {
+              showError(error);
+            } finally {
+              releaseButton.disabled = false;
+            }
+          });
+
+          item.append(info, releaseButton);
+          activeBlockList.append(item);
+        });
+      }
+
+      blockForm.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (currentProfile?.role !== "admin") {
+          showStatus("관리자만 작성 차단을 설정할 수 있어요.");
+          return;
+        }
+
+        const values = Object.fromEntries(
+          new FormData(blockForm)
+        );
+
+        const targetUserId = values.target_user_id;
+        const reason = (values.reason || "").trim();
+        const blockedUntil = values.blocked_until;
+
+        if (!targetUserId || !reason || !blockedUntil) {
+          showStatus("모든 항목을 입력해 주세요.");
+          return;
+        }
+
+        const untilDate = new Date(blockedUntil);
+
+        if (
+          Number.isNaN(untilDate.getTime()) ||
+          untilDate <= new Date()
+        ) {
+          showStatus("차단 종료 시각은 현재보다 미래여야 해요.");
+          return;
+        }
+
+        if (targetUserId === currentUser.id) {
+          showStatus("자기 자신은 차단할 수 없어요.");
+          return;
+        }
+
+        const submitButton =
+          blockForm.querySelector("button[type=submit]");
+
+        submitButton.disabled = true;
+
+        try {
+          const { error } = await supabaseClient
+            .from("user_blocks")
+            .insert({
+              target_user_id: targetUserId,
+              admin_id: currentUser.id,
+              reason,
+              blocked_until: untilDate.toISOString()
+            });
+
+          if (error) throw error;
+
+          blockForm.reset();
+
+          await loadActiveBlocks();
+
+          showStatus("작성 차단을 적용했어요.");
+        } catch (error) {
+          showError(error);
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      async function init() {
+        try {
+          const allowed = await checkAdminAccess();
+
+          if (!allowed) return;
+
+          await loadStudents();
+          await loadActiveBlocks();
+        } catch (error) {
+          showError(error);
+        }
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
